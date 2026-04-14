@@ -1,0 +1,287 @@
+
+/*
+AutoBaza - Головні стилі сайту
+
+*/
+
+/* =============================================
+   АВТОБАЗА - Головні стилі
+   Корпоративний стиль: синій + білий + сірий
+   ============================================= */
+
+/* Змінні кольорів */
+:root {
+    --ab-primary:   #1a73e8;
+    --ab-success:   #28a745;
+    --ab-warning:   #ffc107;
+    --ab-danger:    #dc3545;
+    --ab-info:      #17a2b8;
+    --ab-dark:      #202124;
+    --ab-light:     #f8f9fa;
+    --ab-border:    #e0e0e0;
+    --ab-text:      #3c4043;
+    --ab-muted:     #5f6368;
+}
+
+/* Загальні стилі сторінок */
+.entry-content, .page-content {
+    font-family: -apple-system, BlinkMacSystemFont, 
+                 'Segoe UI', Roboto, sans-serif;
+    color: var(--ab-text);
+    max-width: 1400px !important;
+}
+
+/* Заголовки розділів */
+.entry-content h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ab-dark);
+    border-left: 4px solid var(--ab-primary);
+    padding-left: 14px;
+    margin: 36px 0 16px;
+}
+
+.entry-content h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ab-muted);
+    margin: 24px 0 12px;
+}
+
+/* ---- СТАТУСИ РЯДКІВ (WP Data Access Hooks) ---- */
+/* Зелений — норма/активно/закрито */
+tr[style*="d4edda"] td { 
+    color: #155724 !important; 
+    font-weight: 500;
+}
+/* Жовтий — увага/відкрито */
+tr[style*="fff3cd"] td { 
+    color: #856404 !important; 
+}
+/* Синій — в роботі */
+tr[style*="cce5ff"] td { 
+    color: #004085 !important; 
+}
+/* Червоний — небезпека/прострочено */
+tr[style*="f8d7da"] td { 
+    color: #721c24 !important; 
+}
+
+/* ---- TABLEPRESS СТИЛІ ---- */
+.tablepress {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 14px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1) !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+}
+
+.tablepress thead th {
+    background: var(--ab-primary) !important;
+    color: #ffffff !important;
+    padding: 12px 16px !important;
+    font-weight: 600 !important;
+    text-align: left !important;
+    border: none !important;
+    font-size: 13px !important;
+    letter-spacing: 0.3px !important;
+}
+
+.tablepress tbody tr:nth-child(odd) td {
+    background: #f8f9fa !important;
+}
+
+.tablepress tbody tr:nth-child(even) td {
+    background: #ffffff !important;
+}
+
+.tablepress tbody tr:hover td {
+    background: #e8f0fe !important;
+    transition: background 0.15s ease !important;
+}
+
+.tablepress tbody td {
+    padding: 10px 16px !important;
+    border-bottom: 1px solid var(--ab-border) !important;
+    vertical-align: middle !important;
+    color: var(--ab-text) !important;
+}
+
+/* Кнопки над TablePress */
+.tablepress-table-tools-right .dt-button,
+.tablepress-table-tools-left .dt-button {
+    background: var(--ab-primary) !important;
+    color: #ffffff !important;
+    border: none !important;
+    padding: 7px 16px !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: background 0.2s !important;
+}
+
+.tablepress-table-tools-right .dt-button:hover {
+    background: #1557b0 !important;
+}
+
+/* ---- КНОПКИ EXCEL/ЗВІТИ ---- */
+.ab-export-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+}
+
+.ab-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none !important;
+    transition: opacity 0.2s;
+}
+
+.ab-export-btn:hover { opacity: 0.85; }
+
+.ab-export-btn.blue  { 
+    background: var(--ab-primary); 
+    color: #fff !important; 
+}
+.ab-export-btn.green { 
+    background: var(--ab-success); 
+    color: #fff !important; 
+}
+.ab-export-btn.amber { 
+    background: var(--ab-warning); 
+    color: #000 !important; 
+}
+
+/* ---- СТОРІНКА ВХОДУ ---- */
+#login {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+#login h1 a {
+    background-image: none !important;
+    font-size: 24px;
+    color: var(--ab-primary);
+    font-weight: 700;
+    text-indent: 0 !important;
+    width: auto !important;
+    height: auto !important;
+}
+
+#login h1 a::before {
+    content: '🚛 Автобаза';
+}
+
+.login #wp-submit {
+    background: var(--ab-primary) !important;
+    border-color: var(--ab-primary) !important;
+    border-radius: 6px !important;
+    font-size: 15px !important;
+    padding: 10px !important;
+}
+
+/* ---- МОБІЛЬНА АДАПТАЦІЯ ---- */
+@media (max-width: 768px) {
+    .ab-export-buttons { flex-direction: column; }
+    .tablepress { font-size: 12px !important; }
+    .tablepress thead th,
+    .tablepress tbody td { padding: 8px !important; }
+}
+
+/* Розширити контейнер для таблиць */
+.entry-content,
+.page-content,
+.site-content {
+    max-width: 100% !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+}
+
+/* Таблиця WP Data Access на повну ширину */
+.wpda_table_container {
+    width: 100% !important;
+    overflow-x: auto !important;
+}
+
+
+
+
+
+/* Kadence — стилізація сторінки входу */
+.login {
+    background: #f0f4f8 !important;
+}
+
+.login #login {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 32px !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+    margin-top: 80px !important;
+}
+
+.login h1 a {
+    background-image: none !important;
+    font-family: 'Roboto', sans-serif !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    color: #1a73e8 !important;
+    text-indent: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    display: block !important;
+    text-align: center !important;
+}
+
+.login h1 a::before {
+    content: '🚛 Автобаза';
+}
+
+.login label {
+    color: #5f6368 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+}
+
+.login input[type="text"],
+.login input[type="password"] {
+    border: 1.5px solid #e0e0e0 !important;
+    border-radius: 6px !important;
+    padding: 10px 12px !important;
+    font-size: 15px !important;
+    transition: border-color 0.2s !important;
+}
+
+.login input[type="text"]:focus,
+.login input[type="password"]:focus {
+    border-color: #1a73e8 !important;
+    box-shadow: 0 0 0 3px rgba(26,115,232,0.15) !important;
+    outline: none !important;
+}
+
+.login #wp-submit {
+    background: #1a73e8 !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    padding: 10px !important;
+    width: 100% !important;
+    transition: background 0.2s !important;
+}
+
+.login #wp-submit:hover {
+    background: #1557b0 !important;
+}
+
+
+
+
