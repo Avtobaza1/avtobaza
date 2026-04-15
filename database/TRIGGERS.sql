@@ -1,41 +1,208 @@
--- phpMyAdmin SQL Dump
--- version 5.2.3
--- https://www.phpmyadmin.net/
---
--- Хост: MySQL-8.4
--- Час створення: Квт 14 2026 р., 08:50
--- Версія сервера: 8.4.8
--- Версія PHP: 8.0.30
+-- =============================================
+-- AutoBaza — всі тригери
+-- Виконувати з DELIMITER // в phpMyAdmin
+-- Або через: mysql -u root -p db_name < triggers.sql
+-- =============================================
 
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
-SET time_zone = "+00:00";
+-- Очистити старі
+DROP TRIGGER IF EXISTS ab_set_task_plan;
+DROP TRIGGER IF EXISTS ab_update_order_cost_on_task;
+DROP TRIGGER IF EXISTS ab_update_order_cost_on_task_update;
+DROP TRIGGER IF EXISTS wp_ab_price;
+DROP TRIGGER IF EXISTS ab_after_insert_part_usage;
+DROP TRIGGER IF EXISTS ab_fill_price_on_part_usage;
+DROP TRIGGER IF EXISTS ab_update_order_cost_after_task_insert;
+DROP TRIGGER IF EXISTS ab_update_order_cost_after_task_update;
+DROP TRIGGER IF EXISTS ab_update_order_cost_on_task_delete;
+DROP TRIGGER IF EXISTS ab_update_order_cost_after_part_insert;
+DROP TRIGGER IF EXISTS ab_update_order_cost_after_part_update;
+DROP TRIGGER IF EXISTS ab_adjust_stock_on_usage_update;
+DROP TRIGGER IF EXISTS ab_restore_stock_on_usage_delete;
+DROP TRIGGER IF EXISTS ab_update_order_cost_after_part_delete;
+DROP TRIGGER IF EXISTS ab_decrease_stock_on_part_usage_insert;
 
+DELIMITER //
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
+-- 1. Заповнити plan_id при створенні роботи
+CREATE TRIGGER ab_set_task_plan
+BEFORE INSERT ON wp_ab_maintenance_tasks
+FOR EACH ROW
+BEGIN
+    SET NEW.plan_id = (
+        SELECT plan_id FROM wp_ab_maintenance_orders
+        WHERE id = NEW.order_id
+    );
+END//
 
---
--- База даних: `information_schema`
---
+-- 2. Заповнити ціну запчастини автоматично
+CREATE TRIGGER ab_fill_price_on_part_usage
+BEFORE INSERT ON wp_ab_part_usage
+FOR EACH ROW
+BEGIN
+    IF NEW.unit_price_at_use = 0 OR NEW.unit_price_at_use IS NULL THEN
+        SET NEW.unit_price_at_use = (
+            SELECT COALESCE(unit_price, 0)
+            FROM wp_ab_parts
+            WHERE id = NEW.part_id
+        );
+    END IF;
+END//
 
---
--- VIEW `TRIGGERS`
--- Дані: Жодного
---
+-- 3. Оновити total_cost при додаванні роботи
+CREATE TRIGGER ab_update_order_cost_after_task_insert
+AFTER INSERT ON wp_ab_maintenance_tasks
+FOR EACH ROW
+BEGIN
+    UPDATE wp_ab_maintenance_orders mo
+    SET total_cost = (
+        SELECT COALESCE(SUM(mt.labor_cost), 0)
+        FROM wp_ab_maintenance_tasks mt
+        WHERE mt.order_id = mo.id
+    ) + (
+        SELECT COALESCE(SUM(pu.qty * pu.unit_price_at_use), 0)
+        FROM wp_ab_part_usage pu
+        JOIN wp_ab_maintenance_tasks mt ON pu.task_id = mt.id
+        WHERE mt.order_id = mo.id
+    )
+    WHERE mo.id = NEW.order_id;
+END//
 
+-- 4. Оновити total_cost при зміні роботи
+CREATE TRIGGER ab_update_order_cost_after_task_update
+AFTER UPDATE ON wp_ab_maintenance_tasks
+FOR EACH ROW
+BEGIN
+    UPDATE wp_ab_maintenance_orders mo
+    SET total_cost = (
+        SELECT COALESCE(SUM(mt.labor_cost), 0)
+        FROM wp_ab_maintenance_tasks mt
+        WHERE mt.order_id = mo.id
+    ) + (
+        SELECT COALESCE(SUM(pu.qty * pu.unit_price_at_use), 0)
+        FROM wp_ab_part_usage pu
+        JOIN wp_ab_maintenance_tasks mt ON pu.task_id = mt.id
+        WHERE mt.order_id = mo.id
+    )
+    WHERE mo.id = NEW.order_id;
+END//
 
--- --------------------------------------------------------
+-- 5. Оновити total_cost при видаленні роботи
+CREATE TRIGGER ab_update_order_cost_on_task_delete
+AFTER DELETE ON wp_ab_maintenance_tasks
+FOR EACH ROW
+BEGIN
+    UPDATE wp_ab_maintenance_orders mo
+    SET total_cost = (
+        SELECT COALESCE(SUM(mt.labor_cost), 0)
+        FROM wp_ab_maintenance_tasks mt
+        WHERE mt.order_id = mo.id
+    ) + (
+        SELECT COALESCE(SUM(pu.qty * pu.unit_price_at_use), 0)
+        FROM wp_ab_part_usage pu
+        JOIN wp_ab_maintenance_tasks mt ON pu.task_id = mt.id
+        WHERE mt.order_id = mo.id
+    )
+    WHERE mo.id = OLD.order_id;
+END//
 
---
--- Структура для представлення `TRIGGERS`
---
+-- 6. Оновити total_cost при додаванні запчастини
+CREATE TRIGGER ab_update_order_cost_after_part_insert
+AFTER INSERT ON wp_ab_part_usage
+FOR EACH ROW
+BEGIN
+    UPDATE wp_ab_maintenance_orders mo
+    SET total_cost = (
+        SELECT COALESCE(SUM(mt.labor_cost), 0)
+        FROM wp_ab_maintenance_tasks mt
+        WHERE mt.order_id = mo.id
+    ) + (
+        SELECT COALESCE(SUM(pu.qty * pu.unit_price_at_use), 0)
+        FROM wp_ab_part_usage pu
+        JOIN wp_ab_maintenance_tasks mt ON pu.task_id = mt.id
+        WHERE mt.order_id = mo.id
+    )
+    WHERE mo.id = (
+        SELECT order_id FROM wp_ab_maintenance_tasks
+        WHERE id = NEW.task_id
+    );
+END//
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`mysql.infoschema`@`localhost` SQL SECURITY DEFINER VIEW `TRIGGERS`  AS SELECT (`cat`.`name` collate utf8mb3_tolower_ci) AS `TRIGGER_CATALOG`, (`sch`.`name` collate utf8mb3_tolower_ci) AS `TRIGGER_SCHEMA`, `trg`.`name` AS `TRIGGER_NAME`, `trg`.`event_type` AS `EVENT_MANIPULATION`, (`cat`.`name` collate utf8mb3_tolower_ci) AS `EVENT_OBJECT_CATALOG`, (`sch`.`name` collate utf8mb3_tolower_ci) AS `EVENT_OBJECT_SCHEMA`, (`tbl`.`name` collate utf8mb3_tolower_ci) AS `EVENT_OBJECT_TABLE`, `trg`.`action_order` AS `ACTION_ORDER`, NULL AS `ACTION_CONDITION`, `trg`.`action_statement_utf8` AS `ACTION_STATEMENT`, 'ROW' AS `ACTION_ORIENTATION`, `trg`.`action_timing` AS `ACTION_TIMING`, NULL AS `ACTION_REFERENCE_OLD_TABLE`, NULL AS `ACTION_REFERENCE_NEW_TABLE`, 'OLD' AS `ACTION_REFERENCE_OLD_ROW`, 'NEW' AS `ACTION_REFERENCE_NEW_ROW`, `trg`.`created` AS `CREATED`, `trg`.`sql_mode` AS `SQL_MODE`, `trg`.`definer` AS `DEFINER`, `cs_client`.`name` AS `CHARACTER_SET_CLIENT`, `coll_conn`.`name` AS `COLLATION_CONNECTION`, `coll_db`.`name` AS `DATABASE_COLLATION` FROM (((((((`mysql`.`triggers` `trg` join `mysql`.`tables` `tbl` on((`tbl`.`id` = `trg`.`table_id`))) join `mysql`.`schemata` `sch` on((`tbl`.`schema_id` = `sch`.`id`))) join `mysql`.`catalogs` `cat` on((`cat`.`id` = `sch`.`catalog_id`))) join `mysql`.`collations` `coll_client` on((`coll_client`.`id` = `trg`.`client_collation_id`))) join `mysql`.`character_sets` `cs_client` on((`cs_client`.`id` = `coll_client`.`character_set_id`))) join `mysql`.`collations` `coll_conn` on((`coll_conn`.`id` = `trg`.`connection_collation_id`))) join `mysql`.`collations` `coll_db` on((`coll_db`.`id` = `trg`.`schema_collation_id`))) WHERE ((`tbl`.`type` <> 'VIEW') AND (0 <> can_access_trigger(`sch`.`name`,`tbl`.`name`)) AND (0 <> is_visible_dd_object(`tbl`.`hidden`))) ;
-COMMIT;
+-- 7. Зменшити склад при списанні запчастини
+CREATE TRIGGER ab_decrease_stock_on_part_usage_insert
+AFTER INSERT ON wp_ab_part_usage
+FOR EACH ROW
+BEGIN
+    UPDATE wp_ab_parts
+    SET stock_qty = stock_qty - NEW.qty
+    WHERE id = NEW.part_id;
+END//
 
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+-- 8. Коригувати склад при зміні кількості
+CREATE TRIGGER ab_adjust_stock_on_usage_update
+AFTER UPDATE ON wp_ab_part_usage
+FOR EACH ROW
+BEGIN
+    UPDATE wp_ab_parts
+    SET stock_qty = stock_qty + OLD.qty - NEW.qty
+    WHERE id = NEW.part_id;
+END//
+
+-- 9. Оновити total_cost при зміні запчастини
+CREATE TRIGGER ab_update_order_cost_after_part_update
+AFTER UPDATE ON wp_ab_part_usage
+FOR EACH ROW
+BEGIN
+    DECLARE v_order_id BIGINT UNSIGNED;
+    SELECT order_id INTO v_order_id
+    FROM wp_ab_maintenance_tasks
+    WHERE id = NEW.task_id;
+
+    IF v_order_id IS NOT NULL THEN
+        UPDATE wp_ab_maintenance_orders mo
+        SET total_cost = (
+            SELECT COALESCE(SUM(mt.labor_cost), 0)
+            FROM wp_ab_maintenance_tasks mt
+            WHERE mt.order_id = v_order_id
+        ) + (
+            SELECT COALESCE(SUM(pu.qty * pu.unit_price_at_use), 0)
+            FROM wp_ab_part_usage pu
+            JOIN wp_ab_maintenance_tasks mt ON pu.task_id = mt.id
+            WHERE mt.order_id = v_order_id
+        )
+        WHERE mo.id = v_order_id;
+    END IF;
+END//
+
+-- 10. Повернути склад при видаленні запчастини з наряду
+CREATE TRIGGER ab_restore_stock_on_usage_delete
+AFTER DELETE ON wp_ab_part_usage
+FOR EACH ROW
+BEGIN
+    UPDATE wp_ab_parts
+    SET stock_qty = stock_qty + OLD.qty
+    WHERE id = OLD.part_id;
+END//
+
+-- 11. Оновити total_cost при видаленні запчастини
+CREATE TRIGGER ab_update_order_cost_after_part_delete
+AFTER DELETE ON wp_ab_part_usage
+FOR EACH ROW
+BEGIN
+    UPDATE wp_ab_maintenance_orders mo
+    SET total_cost = (
+        SELECT COALESCE(SUM(mt.labor_cost), 0)
+        FROM wp_ab_maintenance_tasks mt
+        WHERE mt.order_id = mo.id
+    ) + (
+        SELECT COALESCE(SUM(pu.qty * pu.unit_price_at_use), 0)
+        FROM wp_ab_part_usage pu
+        JOIN wp_ab_maintenance_tasks mt ON pu.task_id = mt.id
+        WHERE mt.order_id = mo.id
+    )
+    WHERE mo.id = (
+        SELECT order_id FROM wp_ab_maintenance_tasks
+        WHERE id = OLD.task_id
+    );
+END//
+
+DELIMITER ;
